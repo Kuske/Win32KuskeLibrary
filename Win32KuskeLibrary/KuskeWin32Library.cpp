@@ -183,7 +183,7 @@ void ClearScreen()
 {
 	InvalidateRect(K_Lib_hwnd, NULL, TRUE);
 	KuskeWin32Library::WindowSize MainWindowSize = KuskeWin32Library::WindowStatus::Size::GetWindowSize();
-	DrawBox(0 - 1, 0 - 1, MainWindowSize.width + 1, MainWindowSize.height + 1, RGB(255, 255, 255), 1, true);
+	DrawBox(0 - 1, 0 - 1, MainWindowSize.Width + 1, MainWindowSize.Height + 1, RGB(255, 255, 255), 1, true);
 }
 
 bool Kuske_Init(int width, int height, int startX, int startY)
