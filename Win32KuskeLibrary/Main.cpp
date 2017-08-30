@@ -9,10 +9,19 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	std::string str = "Hello";
 
+	int count = 0;
+
 	while (ProcessMessage())
 	{
-		DrawBox(20, 20, 80, 180, RGB(255, 100, 100), 5);
-		DrawString(50, 50, TEXT("Hello"), RGB(255, 0, 0), 10);
+		ClearScreen();
+		DrawBox(80, 0, 90, 300, RGB(0, 0, 0), 50, true);
+		DrawBox(20, 50, 200, 65, RGB(0, 0, 0), 50, true);
+		DrawString(count, 100, TEXT("(^ _ ^)"), RGB(255, 0, 0), 5);
+
+		count++;
+
+		Sleep(50);
+
 	}
 
 	Kuske_End();
