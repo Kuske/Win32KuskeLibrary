@@ -11,7 +11,6 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	int count = 0;
 
-	KuskeWin32Library::Music test = KuskeWin32Library::Music::Music("WaveTest.wav", KuskeWin32Library::Music::MusicType::);
 
 	while (ProcessMessage())
 	{
