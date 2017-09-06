@@ -21,7 +21,6 @@ bool ProcessMessage();
 
 namespace KuskeWin32Library {};
 
-HDC hdc;
 MSG Kuske_msg;
 
 HWND K_Lib_hwnd;
@@ -43,6 +42,29 @@ namespace KuskeMusicLib
 
 namespace KuskeWin32Library
 {
+
+	static class Time
+	{
+	public:
+		Time() = delete;
+		~Time() = delete;
+
+		int GetLocalTime();
+
+	private:
+
+	};
+
+
+	int Time::GetLocalTime()
+	{
+
+
+
+		return 0;
+	}
+
+
 
 	struct WindowSize
 	{
@@ -100,8 +122,8 @@ namespace KuskeWin32Library
 		RECT rc;
 		GetClientRect(K_Lib_hwnd, &rc);
 
-		WindowHeight = rc.bottom;
-		WindowWidth = rc.right;
+		WindowStatus::Size::WindowHeight = rc.bottom;
+		WindowStatus::Size::WindowWidth = rc.right;
 	}
 
 	//////////////////////////////////////////////////////////////////////////////
@@ -188,7 +210,7 @@ namespace KuskeWin32Library
 	{
 
 		mop.lpstrElementName = FileName.c_str();
-		mop.lpstrDeviceType = MusicType.c_str;
+		mop.lpstrDeviceType = MusicType.c_str();
 		mciSendCommand(NULL, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_ELEMENT, (DWORD_PTR)&mop);
 
 		//MCI_PLAY_PARMS構造体の設定
@@ -242,7 +264,7 @@ namespace KuskeWin32Library
 
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	PAINTSTRUCT ps;
-	K_Lib_hwnd = hwnd;
+	// K_Lib_hwnd = hwnd;
 	switch (msg) {
 	case WM_CREATE:
 		mop.lpstrDeviceType = "MPEGVideo";
@@ -250,6 +272,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		mciSendCommand(NULL, MCI_OPEN, MCI_OPEN_TYPE | MCI_OPEN_ELEMENT, (DWORD_PTR)&mop);
 		//MCI_PLAY_PARMS構造体の設定
 		mop.dwCallback = (DWORD)hwnd;
+
+		KuskeWin32Library::WindowStatus::Size::ReGetWindowSize();
 
 
 		return 0;
@@ -277,12 +301,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		return 0;
 
 	case WM_PAINT:
-		if (FinishDrawFlag == true)
-		{
 			BeginPaint(hwnd, &ps);
 			EndPaint(hwnd, &ps);
-
-		}
 
 
 
@@ -302,32 +322,44 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 void DrawLine(int x1, int y1, int x2, int y2, COLORREF color, int thick)
 {
 	FinishDrawFlag = false;
-	hdc = GetDC(K_Lib_hwnd);
-	CreatePen(PS_SOLID, thick, color);
+	HDC hdc = GetDC(K_Lib_hwnd);
+	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
 	MoveToEx(hdc, x1, y1, NULL);
 	LineTo(hdc, x2, y2);
 	ReleaseDC(K_Lib_hwnd, hdc);
+	DeleteObject(my_pen);
 }
 
 void DrawBox(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag)
 {
 	FinishDrawFlag = false;
+	HDC hdc = GetDC(K_Lib_hwnd);
+	HBRUSH brush;
+	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
 	if (FillFlag == true)
 	{
-		LOGBRUSH my_brush;
-		my_brush.lbStyle = BS_SOLID;
-		my_brush.lbColor = color;
-		SelectObject(hdc, CreateBrushIndirect(&my_brush));
+		SelectObject(hdc, brush = CreateSolidBrush(color));
+		Rectangle(hdc, x1, y1, x2, y2);
+		ReleaseDC(K_Lib_hwnd, hdc);
+		DeleteObject(my_pen);
+		DeleteObject(brush);
 	}
-	hdc = GetDC(K_Lib_hwnd);
-	CreatePen(PS_SOLID, thick, color);
-	Rectangle(hdc, x1, y1, x2, y2);
-	ReleaseDC(K_Lib_hwnd, hdc);
+	else
+	{
+		SelectObject(hdc, GetStockObject(NULL_BRUSH));
+		Rectangle(hdc, x1, y1, x2, y2);
+		ReleaseDC(K_Lib_hwnd, hdc);
+		DeleteObject(my_pen);
+	}
+
+
+
 }
 
 void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool FillFlag)
 {
 	FinishDrawFlag = false;
+	HDC hdc = GetDC(K_Lib_hwnd);
 	if (FillFlag == true)
 	{
 		LOGBRUSH my_brush;
@@ -335,7 +367,6 @@ void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool Fill
 		my_brush.lbColor = color;
 		SelectObject(hdc, CreateBrushIndirect(&my_brush));
 	}
-	hdc = GetDC(K_Lib_hwnd);
 	CreatePen(PS_SOLID, thick, color);
 	Ellipse(hdc, x1, y1, x1 + radius, y1 + radius);
 	ReleaseDC(K_Lib_hwnd, hdc);
@@ -344,6 +375,7 @@ void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool Fill
 void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag)
 {
 	FinishDrawFlag = false;
+	HDC hdc = GetDC(K_Lib_hwnd);
 	if (FillFlag == true)
 	{
 		LOGBRUSH my_brush;
@@ -351,7 +383,6 @@ void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool 
 		my_brush.lbColor = color;
 		SelectObject(hdc, CreateBrushIndirect(&my_brush));
 	}
-	hdc = GetDC(K_Lib_hwnd);
 	CreatePen(PS_SOLID, thick, color);
 	Ellipse(hdc, x1, y1, x2, y2);
 	ReleaseDC(K_Lib_hwnd, hdc);
@@ -360,7 +391,7 @@ void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool 
 void DrawString(int x1, int y1, LPCSTR text, COLORREF color, int thick)
 {
 	FinishDrawFlag = false;
-	hdc = GetDC(K_Lib_hwnd);
+	HDC hdc = GetDC(K_Lib_hwnd);
 	SetTextColor(hdc, color);
 	SetBkMode(hdc, TRANSPARENT);
 	TextOut(hdc, x1, y1, text, lstrlen(text));
@@ -369,9 +400,11 @@ void DrawString(int x1, int y1, LPCSTR text, COLORREF color, int thick)
 
 void ClearScreen()
 {
-	KuskeWin32Library::WindowSize MainWindowSize = KuskeWin32Library::WindowStatus::Size::GetWindowSize();
-	DrawBox(0 - 1, 0 - 1, MainWindowSize.Width + 1, MainWindowSize.Height + 1, RGB(255, 255, 255), 1, true);
-	FinishDrawFlag = true;
+	int x, y;
+	x = KuskeWin32Library::WindowStatus::Size::GetWindowSize().Width;
+	y = KuskeWin32Library::WindowStatus::Size::GetWindowSize().Height;
+	DrawBox(-1, -1, x + 1, y + 1, RGB(255, 255, 255), 1, true);
+
 	InvalidateRect(K_Lib_hwnd, NULL, TRUE);
 	UpdateWindow(K_Lib_hwnd);
 }
@@ -427,9 +460,14 @@ int GetEndStatus()
 // Windowsのメッセージを処理する falseだったらすぐに閉じてください
 bool ProcessMessage()
 {
-
+	
+	if (PeekMessage(&Kuske_msg, NULL, 0, 0, PM_REMOVE)) {
+		if (Kuske_msg.message == WM_QUIT) return false;
+		DispatchMessage(&Kuske_msg);
+	}
+	/*
 	if (GetMessage(&Kuske_msg, NULL, 0, 0) == false) return false;
-
-	DispatchMessage(&Kuske_msg);
-	return true;
+	
+	DispatchMessage(&Kuske_msg);*/
+	 return true;
 }
