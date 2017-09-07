@@ -10,14 +10,14 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	int count = 0;
 
 	char str[3000];
+
+	GraphicsData Lion;
+	Lion = LoadGraph("hoge.png");
+
 	while (ProcessMessage())
 	{
 		ClearScreen();
 
-
-		DrawBox(80, 0, 90, 300, RGB(0, 0, 0), 50, true);
-		DrawBox(20, 50, 200, 65, RGB(0, 0, 0), 50, true);
-		DrawString(count % 500, 100, TEXT("(^ _ ^)"), RGB(255, 0, 0), 5);
 
 
 		count++;
@@ -25,6 +25,10 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		sprintf_s(str, "%d", count);
 
 		DrawString(100, 300, TEXT(str), RGB(0, 0, 0), 5);
+
+		DrawGraph(200, 200, Lion);
+
+		ScreenFlip();
 
 	}
 

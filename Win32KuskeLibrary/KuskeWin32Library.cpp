@@ -2,22 +2,35 @@
 #include <cstdio>
 #include <string>
 #include <vector>
+#define STB_IMAGE_IMPLEMENTATION
+#include "stbi_image.h"
 
 #pragma comment(lib, "winmm.lib")
 
 #define GetHInstance() ((HINSTANCE)GetModuleHandle(0))
 
+struct GraphicsData									// 画像の構造体
+{
+	int width;
+	int height;
+	unsigned char* data;
+	int bpp;
+};
 void DrawLine(int x1, int y1, int x2, int y2, COLORREF color, int thick);						// 線を描画
 void DrawBox(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag);			// 四角を描画
 void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool FillFlag);			// 円を描画
 void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag);		// 円を描画
 void DrawString(int x1, int y1, LPCSTR text, COLORREF color, int thick);						// 文字列を描画
+void DrawPixel(int x, int y, COLORREF color, double alpha);										// 点の描画
+GraphicsData LoadGraph(std::string FilePath);													// 画像の読み込み
+void DrawGraph(int x, int y, GraphicsData Graph);												// 画像の描画
 void ClearScreen();																				// 画面消去
 
 bool Kuske_Init(int width, int height, int startX, int startY);
 void Kuske_End();
 int GetEndStatus();
 bool ProcessMessage();
+void ScreenFlip();
 
 namespace KuskeWin32Library {};
 
@@ -31,6 +44,8 @@ static MCI_OPEN_PARMS mop;
 static int counter = 0;
 
 std::vector<MCI_OPEN_PARMS> K_Music_Loop_List;
+
+
 
 // 後でクラスとしてまとめておいて
 // 名前も変更して
@@ -104,7 +119,8 @@ namespace KuskeWin32Library
 
 	void WindowStatus::Size::SetWindowSize(int Width, int Height)
 	{
-
+		WindowWidth = Width;
+		WindowHeight = Height;
 	}
 
 	WindowSize WindowStatus::Size::GetWindowSize()
@@ -262,9 +278,15 @@ namespace KuskeWin32Library
 
 }
 
+HDC hMemDC;
+HBITMAP hBitmap;
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	PAINTSTRUCT ps;
 	// K_Lib_hwnd = hwnd;
+		//メモリデバイスコンテキストを作る
+	HDC hdc = GetDC(K_Lib_hwnd);
+	bool tmp = false;
 	switch (msg) {
 	case WM_CREATE:
 		mop.lpstrDeviceType = "MPEGVideo";
@@ -273,12 +295,20 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		//MCI_PLAY_PARMS構造体の設定
 		mop.dwCallback = (DWORD)hwnd;
 
-		KuskeWin32Library::WindowStatus::Size::ReGetWindowSize();
 
+		auto DrawWindowSize = KuskeWin32Library::WindowStatus::Size::GetWindowSize();
+
+		hBitmap = CreateCompatibleBitmap(hdc, DrawWindowSize.Width, DrawWindowSize.Height);
+		hMemDC = CreateCompatibleDC(hdc);
+		ReleaseDC(hwnd, hdc);
+		SelectObject(hMemDC, hBitmap);
+		DeleteObject(hBitmap);
 
 		return 0;
 	case WM_DESTROY:
 		PostQuitMessage(0);
+		Kuske_End();
+		ExitProcess(0);
 		return 0;
 	case WM_SIZE:
 		KuskeWin32Library::WindowStatus::Size::ReGetWindowSize();
@@ -302,6 +332,8 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 	case WM_PAINT:
 			BeginPaint(hwnd, &ps);
+			//表画面へ転送
+			BitBlt(hdc, 0, 0, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Width, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Height, hMemDC, 0, 0, SRCCOPY);
 			EndPaint(hwnd, &ps);
 
 
@@ -321,34 +353,32 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 
 void DrawLine(int x1, int y1, int x2, int y2, COLORREF color, int thick)
 {
-	FinishDrawFlag = false;
-	HDC hdc = GetDC(K_Lib_hwnd);
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
 	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
-	MoveToEx(hdc, x1, y1, NULL);
-	LineTo(hdc, x2, y2);
-	ReleaseDC(K_Lib_hwnd, hdc);
+	MoveToEx(hMemDC, x1, y1, NULL);
+	LineTo(hMemDC, x2, y2);
+	ReleaseDC(K_Lib_hwnd, hMemDC);
 	DeleteObject(my_pen);
 }
 
 void DrawBox(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag)
 {
-	FinishDrawFlag = false;
-	HDC hdc = GetDC(K_Lib_hwnd);
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
 	HBRUSH brush;
 	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
 	if (FillFlag == true)
 	{
-		SelectObject(hdc, brush = CreateSolidBrush(color));
-		Rectangle(hdc, x1, y1, x2, y2);
-		ReleaseDC(K_Lib_hwnd, hdc);
+		SelectObject(hMemDC, brush = CreateSolidBrush(color));
+		Rectangle(hMemDC, x1, y1, x2, y2);
+		ReleaseDC(K_Lib_hwnd, hMemDC);
 		DeleteObject(my_pen);
 		DeleteObject(brush);
 	}
 	else
 	{
-		SelectObject(hdc, GetStockObject(NULL_BRUSH));
-		Rectangle(hdc, x1, y1, x2, y2);
-		ReleaseDC(K_Lib_hwnd, hdc);
+		SelectObject(hMemDC, GetStockObject(NULL_BRUSH));
+		Rectangle(hMemDC, x1, y1, x2, y2);
+		ReleaseDC(K_Lib_hwnd, hMemDC);
 		DeleteObject(my_pen);
 	}
 
@@ -358,45 +388,137 @@ void DrawBox(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool Fil
 
 void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool FillFlag)
 {
-	FinishDrawFlag = false;
-	HDC hdc = GetDC(K_Lib_hwnd);
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
+	HBRUSH brush;
+	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
 	if (FillFlag == true)
 	{
-		LOGBRUSH my_brush;
-		my_brush.lbStyle = BS_SOLID;
-		my_brush.lbColor = color;
-		SelectObject(hdc, CreateBrushIndirect(&my_brush));
+		SelectObject(hMemDC, brush = CreateSolidBrush(color));
+
+		Ellipse(hMemDC, x1, y1, x1 + radius, y1 + radius);
+
+		ReleaseDC(K_Lib_hwnd, hMemDC);
+		DeleteObject(my_pen);
+		DeleteObject(brush);
 	}
-	CreatePen(PS_SOLID, thick, color);
-	Ellipse(hdc, x1, y1, x1 + radius, y1 + radius);
-	ReleaseDC(K_Lib_hwnd, hdc);
+	else
+	{
+		SelectObject(hMemDC, GetStockObject(NULL_BRUSH));
+
+		Ellipse(hMemDC, x1, y1, x1 + radius, y1 + radius);
+
+		// ReleaseDC(K_Lib_hwnd, hMemDC);
+		DeleteObject(my_pen);
+	}
+	ReleaseDC(K_Lib_hwnd, hMemDC);
 }
 
 void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag)
 {
-	FinishDrawFlag = false;
-	HDC hdc = GetDC(K_Lib_hwnd);
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
+	HBRUSH brush;
+	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
 	if (FillFlag == true)
 	{
-		LOGBRUSH my_brush;
-		my_brush.lbStyle = BS_SOLID;
-		my_brush.lbColor = color;
-		SelectObject(hdc, CreateBrushIndirect(&my_brush));
+		SelectObject(hMemDC, brush = CreateSolidBrush(color));
+
+		Ellipse(hMemDC, x1, y1, x2, y2);
+
+		// ReleaseDC(K_Lib_hwnd, hMemDC);
+		DeleteObject(my_pen);
+		DeleteObject(brush);
 	}
-	CreatePen(PS_SOLID, thick, color);
-	Ellipse(hdc, x1, y1, x2, y2);
-	ReleaseDC(K_Lib_hwnd, hdc);
+	else
+	{
+		SelectObject(hMemDC, GetStockObject(NULL_BRUSH));
+
+		Ellipse(hMemDC, x1, y1, x2, y2);
+
+		// ReleaseDC(K_Lib_hwnd, hMemDC);
+		DeleteObject(my_pen);
+	}
+	ReleaseDC(K_Lib_hwnd, hMemDC);
 }
 
 void DrawString(int x1, int y1, LPCSTR text, COLORREF color, int thick)
 {
-	FinishDrawFlag = false;
-	HDC hdc = GetDC(K_Lib_hwnd);
-	SetTextColor(hdc, color);
-	SetBkMode(hdc, TRANSPARENT);
-	TextOut(hdc, x1, y1, text, lstrlen(text));
-	ReleaseDC(K_Lib_hwnd, hdc);
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
+	SetTextColor(hMemDC, color);
+	SetBkMode(hMemDC, TRANSPARENT);
+	TextOut(hMemDC, x1, y1, text, lstrlen(text));
+	// ReleaseDC(K_Lib_hwnd, hMemDC);
 }
+
+void DrawPixel(int x, int y, COLORREF color, double alpha)
+{
+
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
+	COLORREF PixelColor;
+	if (alpha < 0.95 && 0.05 < alpha)
+	{
+		// 透明対応する
+
+		PixelColor = GetPixel(hMemDC, x, y);
+		int Red = GetRValue(PixelColor);
+		int Green = GetGValue(PixelColor);
+		int Blue = GetBValue(PixelColor);
+		int Add_Red = GetRValue(color);
+		int Add_Green = GetGValue(color);
+		int Add_Blue = GetBValue(color);
+
+		SetPixel(hMemDC, x, y, RGB(Red * (1.0 - alpha) + Add_Red * (alpha), Green * (1.0 - alpha) + Add_Green * (alpha), Blue * (1.0 - alpha) + Add_Blue * (alpha)));
+
+	}
+	else
+	{
+		// そのまま描画
+		if(alpha >= 0.95)
+		SetPixel(hMemDC, x, y, color);
+	}
+
+	ReleaseDC(K_Lib_hwnd, hMemDC);
+
+
+}
+
+
+GraphicsData LoadGraph(std::string FilePath)
+{
+
+	GraphicsData my_graph;
+	// ファイルを読み込み、画像データを取り出す
+	//   最後の引数でピクセルあたりのバイト数を強制できる
+	my_graph.data = stbi_load(FilePath.c_str(), &my_graph.width, &my_graph.height, &my_graph.bpp, 4);
+
+	return my_graph;
+
+}
+
+void DrawGraph(int x, int y, GraphicsData Graph)
+{
+
+	for (int y = 0; y < Graph.width; ++y)
+	{
+		for (int x = 0; x < Graph.height; ++x)
+		{
+
+			int pos = (y * Graph.width + x) * 4;
+
+			int Red = Graph.data[pos + 0];
+			int Green = Graph.data[pos + 1];
+			int Blue = Graph.data[pos + 2];
+			double alpha = Graph.data[pos + 3];
+
+
+
+			DrawPixel(x, y, RGB(Red, Green, Blue), alpha / 255.0);
+		}
+
+	}
+
+	ProcessMessage();
+}
+
 
 void ClearScreen()
 {
@@ -405,8 +527,6 @@ void ClearScreen()
 	y = KuskeWin32Library::WindowStatus::Size::GetWindowSize().Height;
 	DrawBox(-1, -1, x + 1, y + 1, RGB(255, 255, 255), 1, true);
 
-	InvalidateRect(K_Lib_hwnd, NULL, TRUE);
-	UpdateWindow(K_Lib_hwnd);
 }
 
 
@@ -417,6 +537,8 @@ bool Kuske_Init(int width, int height, int startX, int startY)
 	WNDCLASS winc;
 
 	HINSTANCE hInstance = GetHInstance();
+
+	KuskeWin32Library::WindowStatus::Size::SetWindowSize(width, height);
 
 	winc.style = CS_HREDRAW | CS_VREDRAW;
 	winc.lpfnWndProc = WndProc;
@@ -433,7 +555,7 @@ bool Kuske_Init(int width, int height, int startX, int startY)
 	hwnd = CreateWindow(
 		TEXT("Kuske"), TEXT("Kitty on your lap"),
 		WS_OVERLAPPEDWINDOW | WS_VISIBLE,
-		CW_USEDEFAULT, CW_USEDEFAULT,
+		startX, startY,
 		width, height,
 		NULL, NULL,
 		hInstance, NULL
@@ -465,9 +587,22 @@ bool ProcessMessage()
 		if (Kuske_msg.message == WM_QUIT) return false;
 		DispatchMessage(&Kuske_msg);
 	}
-	/*
-	if (GetMessage(&Kuske_msg, NULL, 0, 0) == false) return false;
 	
-	DispatchMessage(&Kuske_msg);*/
+	// if (GetMessage(&Kuske_msg, NULL, 0, 0) == false) return false;
+	// 
+	// DispatchMessage(&Kuske_msg);
 	 return true;
+}
+
+void ScreenFlip()
+{
+
+	HDC hdc = GetDC(K_Lib_hwnd);
+
+	//表画面へ転送
+	BitBlt(hdc, 0, 0, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Width, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Height, hMemDC, 0, 0, SRCCOPY);
+
+	InvalidateRect(K_Lib_hwnd, NULL, TRUE);
+	UpdateWindow(K_Lib_hwnd);
+
 }
