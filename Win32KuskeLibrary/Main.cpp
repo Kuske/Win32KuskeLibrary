@@ -14,7 +14,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 	int MapData[16][16];
 
 	GraphicsData Lion;
-	Lion = LoadGraph("hoge.png");
+	Lion = LoadGraph("tiger-png-9.png");
 
 	SetBackScreen();
 
@@ -27,7 +27,7 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		count++;
 
 		sprintf_s(str, "%d", count);
-		DrawGraph(100, 100, Lion, 1.0);
+		DrawGraph(0, 0, Lion, 1.0);
 
 		DrawString(400, 400, TEXT(str), RGB(0, 0, 0), 5);
 

@@ -546,9 +546,9 @@ GraphicsData LoadGraph(std::string FilePath)
 void DrawGraph(int x, int y, GraphicsData Graph, double alpha)
 {
 
-	for (int Loop_y = 0; Loop_y < Graph.width; ++Loop_y)
+	for (int Loop_y = 0; Loop_y < Graph.height; ++Loop_y)
 	{
-		for (int Loop_x = 0; Loop_x < Graph.height; ++Loop_x)
+		for (int Loop_x = 0; Loop_x < Graph.width; ++Loop_x)
 		{
 
 			int pos = (Loop_y * Graph.width + Loop_x) * 4;
