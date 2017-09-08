@@ -22,14 +22,16 @@ void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool Fill
 void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag);		// ‰~‚ð•`‰æ
 void DrawString(int x1, int y1, LPCSTR text, COLORREF color, int thick);						// •¶Žš—ñ‚ð•`‰æ
 void DrawPixel(int x, int y, COLORREF color, double alpha);										// “_‚Ì•`‰æ
+void DrawPixel(int x, int y, int Red, int Green, int Blue, double alpha);						// “_‚Ì•`‰æ
 GraphicsData LoadGraph(std::string FilePath);													// ‰æ‘œ‚Ì“Ç‚Ýž‚Ý
-void DrawGraph(int x, int y, GraphicsData Graph);												// ‰æ‘œ‚Ì•`‰æ
+void DrawGraph(int x, int y, GraphicsData Graph, double alpha);									// ‰æ‘œ‚Ì•`‰æ
 void ClearScreen();																				// ‰æ–ÊÁ‹Ž
 
 bool Kuske_Init(int width, int height, int startX, int startY);
 void Kuske_End();
 int GetEndStatus();
 bool ProcessMessage();
+void SetBackScreen();
 void ScreenFlip();
 
 namespace KuskeWin32Library {};
@@ -102,12 +104,18 @@ namespace KuskeWin32Library
 
 			static void SetWindowSize(int width, int height);
 			static WindowSize GetWindowSize();
+			static WindowSize GetCliantSize();
 
 			static void ReGetWindowSize();
+			static void ReGetCliantSize();
 
 		private:
 			static int WindowWidth;
 			static int WindowHeight;
+
+			static int CliantWidth;
+			static int CliantHeight;
+
 		};
 
 	};
@@ -132,7 +140,26 @@ namespace KuskeWin32Library
 		return ThisWindowSize;
 	}
 
+	WindowSize WindowStatus::Size::GetCliantSize()
+	{
+
+		WindowSize ThisWindowSize;
+		ThisWindowSize.Height = WindowHeight;
+		ThisWindowSize.Width = WindowWidth;
+		return ThisWindowSize;
+	}
+
 	void WindowStatus::Size::ReGetWindowSize()
+	{
+
+		RECT rc;
+		GetClientRect(K_Lib_hwnd, &rc);
+
+		WindowStatus::Size::WindowHeight = rc.bottom;
+		WindowStatus::Size::WindowWidth = rc.right;
+	}
+
+	void WindowStatus::Size::ReGetCliantSize()
 	{
 
 		RECT rc;
@@ -281,6 +308,8 @@ namespace KuskeWin32Library
 HDC hMemDC;
 HBITMAP hBitmap;
 
+bool WindowUpdateFlag = false;
+
 LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 	PAINTSTRUCT ps;
 	// K_Lib_hwnd = hwnd;
@@ -296,13 +325,6 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		mop.dwCallback = (DWORD)hwnd;
 
 
-		auto DrawWindowSize = KuskeWin32Library::WindowStatus::Size::GetWindowSize();
-
-		hBitmap = CreateCompatibleBitmap(hdc, DrawWindowSize.Width, DrawWindowSize.Height);
-		hMemDC = CreateCompatibleDC(hdc);
-		ReleaseDC(hwnd, hdc);
-		SelectObject(hMemDC, hBitmap);
-		DeleteObject(hBitmap);
 
 		return 0;
 	case WM_DESTROY:
@@ -331,10 +353,14 @@ LRESULT CALLBACK WndProc(HWND hwnd, UINT msg, WPARAM wp, LPARAM lp) {
 		return 0;
 
 	case WM_PAINT:
+		if (WindowUpdateFlag = true)
+		{
+
 			BeginPaint(hwnd, &ps);
 			//•\‰æ–Ê‚Ö“]‘—
 			BitBlt(hdc, 0, 0, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Width, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Height, hMemDC, 0, 0, SRCCOPY);
 			EndPaint(hwnd, &ps);
+		}
 
 
 
@@ -366,6 +392,7 @@ void DrawBox(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool Fil
 	// HDC hMemDC = GetDC(K_Lib_hwnd);
 	HBRUSH brush;
 	HPEN my_pen = CreatePen(PS_SOLID, thick, color);
+	SelectObject(hMemDC, my_pen);
 	if (FillFlag == true)
 	{
 		SelectObject(hMemDC, brush = CreateSolidBrush(color));
@@ -472,8 +499,36 @@ void DrawPixel(int x, int y, COLORREF color, double alpha)
 	else
 	{
 		// ‚»‚Ì‚Ü‚Ü•`‰æ
-		if(alpha >= 0.95)
-		SetPixel(hMemDC, x, y, color);
+		if (alpha >= 0.95)
+			SetPixel(hMemDC, x, y, color);
+	}
+
+	ReleaseDC(K_Lib_hwnd, hMemDC);
+
+
+}
+void DrawPixel(int x, int y, int Red, int Green, int Blue, double alpha)
+{
+
+	// HDC hMemDC = GetDC(K_Lib_hwnd);
+	COLORREF PixelColor;
+	if (alpha < 0.95 && 0.05 < alpha)
+	{
+		// “§–¾‘Î‰ž‚·‚é
+
+		PixelColor = GetPixel(hMemDC, x, y);
+		int Add_Red = GetRValue(PixelColor);
+		int Add_Green = GetGValue(PixelColor);
+		int Add_Blue = GetBValue(PixelColor);
+
+		SetPixel(hMemDC, x, y, RGB(Red * (1.0 - alpha) + Add_Red * (alpha), Green * (1.0 - alpha) + Add_Green * (alpha), Blue * (1.0 - alpha) + Add_Blue * (alpha)));
+
+	}
+	else
+	{
+		// ‚»‚Ì‚Ü‚Ü•`‰æ
+		if (alpha >= 0.95)
+			SetPixel(hMemDC, x, y, RGB(Red, Green, Blue));
 	}
 
 	ReleaseDC(K_Lib_hwnd, hMemDC);
@@ -494,29 +549,28 @@ GraphicsData LoadGraph(std::string FilePath)
 
 }
 
-void DrawGraph(int x, int y, GraphicsData Graph)
+void DrawGraph(int x, int y, GraphicsData Graph, double alpha)
 {
 
-	for (int y = 0; y < Graph.width; ++y)
+	for (int Loop_y = 0; Loop_y < Graph.width; ++Loop_y)
 	{
-		for (int x = 0; x < Graph.height; ++x)
+		for (int Loop_x = 0; Loop_x < Graph.height; ++Loop_x)
 		{
 
-			int pos = (y * Graph.width + x) * 4;
+			int pos = (Loop_y * Graph.width + Loop_x) * 4;
 
 			int Red = Graph.data[pos + 0];
 			int Green = Graph.data[pos + 1];
 			int Blue = Graph.data[pos + 2];
-			double alpha = Graph.data[pos + 3];
+			double alpha_graph = Graph.data[pos + 3];
 
-
-
-			DrawPixel(x, y, RGB(Red, Green, Blue), alpha / 255.0);
+			DrawPixel(Loop_x + x, Loop_y + y, RGB(Red, Green, Blue), (alpha_graph / 255.0) * alpha);
 		}
 
 	}
 
 	ProcessMessage();
+
 }
 
 
@@ -565,7 +619,22 @@ bool Kuske_Init(int width, int height, int startX, int startY)
 
 	K_Lib_hwnd = hwnd;
 
+	KuskeWin32Library::WindowStatus::Size::ReGetWindowSize();
+
 	return true;
+}
+
+void SetBackScreen()
+{
+	HDC hdc = GetDC(K_Lib_hwnd);
+
+	auto DrawWindowSize = KuskeWin32Library::WindowStatus::Size::GetWindowSize();
+
+	hBitmap = CreateCompatibleBitmap(hdc, DrawWindowSize.Width, DrawWindowSize.Height);
+	hMemDC = CreateCompatibleDC(hdc);
+	ReleaseDC(K_Lib_hwnd, hdc);
+	SelectObject(hMemDC, hBitmap);
+	DeleteObject(hBitmap);
 }
 
 // ƒEƒBƒ“ƒhƒE‚ðÁ‚·‚¾‚¯
@@ -587,7 +656,8 @@ bool ProcessMessage()
 		if (Kuske_msg.message == WM_QUIT) return false;
 		DispatchMessage(&Kuske_msg);
 	}
-	
+
+	WindowUpdateFlag = false;
 	// if (GetMessage(&Kuske_msg, NULL, 0, 0) == false) return false;
 	// 
 	// DispatchMessage(&Kuske_msg);
@@ -598,11 +668,10 @@ void ScreenFlip()
 {
 
 	HDC hdc = GetDC(K_Lib_hwnd);
-
-	//•\‰æ–Ê‚Ö“]‘—
-	BitBlt(hdc, 0, 0, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Width, KuskeWin32Library::WindowStatus::Size::GetWindowSize().Height, hMemDC, 0, 0, SRCCOPY);
+	WindowUpdateFlag = true;
 
 	InvalidateRect(K_Lib_hwnd, NULL, TRUE);
-	UpdateWindow(K_Lib_hwnd);
+
+
 
 }

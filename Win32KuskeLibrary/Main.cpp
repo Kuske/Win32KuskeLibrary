@@ -11,8 +11,12 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 
 	char str[3000];
 
+	int MapData[16][16];
+
 	GraphicsData Lion;
 	Lion = LoadGraph("hoge.png");
+
+	SetBackScreen();
 
 	while (ProcessMessage())
 	{
@@ -23,10 +27,9 @@ int WINAPI WinMain(HINSTANCE hInstance, HINSTANCE hPrevInstance,
 		count++;
 
 		sprintf_s(str, "%d", count);
+		DrawGraph(100, 100, Lion, 1.0);
 
-		DrawString(100, 300, TEXT(str), RGB(0, 0, 0), 5);
-
-		DrawGraph(200, 200, Lion);
+		DrawString(400, 400, TEXT(str), RGB(0, 0, 0), 5);
 
 		ScreenFlip();
 

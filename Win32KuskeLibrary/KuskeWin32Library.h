@@ -10,14 +10,16 @@ void DrawCircle(int x1, int y1, int radius, COLORREF color, int thick, bool Fill
 void DrawCircle(int x1, int y1, int x2, int y2, COLORREF color, int thick, bool FillFlag);		// ‰~‚ğ•`‰æ
 void DrawString(int x1, int y1, LPCSTR text, COLORREF color, int thick);						// •¶š—ñ‚ğ•`‰æ
 void DrawPixel(int x, int y, COLORREF color, double alpha);										// “_‚Ì•`‰æ
+void DrawPixel(int x, int y, int Red, int Green, int Blue, double alpha);						// “_‚Ì•`‰æ
 GraphicsData LoadGraph(std::string FilePath);													// ‰æ‘œ‚Ì“Ç‚İ‚İ 
-void DrawGraph(int x, int y, GraphicsData Graph);												// ‰æ‘œ‚Ì•`‰æ
+void DrawGraph(int x, int y, GraphicsData Graph, double alpha);									// ‰æ‘œ‚Ì•`‰æ
 void ClearScreen();																				// ‰æ–ÊÁ‹
 
 bool Kuske_Init(int width, int height, int startX, int startY);
 void Kuske_End();
 int GetEndStatus();
 bool ProcessMessage();
+void SetBackScreen();
 void ScreenFlip();
 
 struct GraphicsData									// ‰æ‘œ‚Ì\‘¢‘Ì
