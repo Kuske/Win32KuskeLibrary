@@ -49,12 +49,6 @@ std::vector<MCI_OPEN_PARMS> K_Music_Loop_List;
 
 
 
-// 後でクラスとしてまとめておいて
-// 名前も変更して
-namespace KuskeMusicLib
-{
-	
-}
 
 
 namespace KuskeWin32Library
